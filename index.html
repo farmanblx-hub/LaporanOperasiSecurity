@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Operasional Security (Keamanan)</title>
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- jsPDF & SheetJS (xlsx) for professional exports -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        slateDark: '#0f172a',
+                        slateCard: '#1e293b',
+                        accentBlue: '#3b82f6',
+                        accentGreen: '#10b981'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-900 text-slate-100 font-sans antialiased min-h-screen flex flex-col">
+
+    <!-- Top Navigation Header -->
+    <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-50 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="bg-accentBlue p-2.5 rounded-lg text-white shadow-lg">
+                    <i class="fa-solid fa-shield-halved text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-wide">SECURITY OPERATIONAL DASHBOARD</h1>
+                    <p class="text-xs text-slate-400">Sistem Pemantauan Fasilitas & Pelaporan Real-Time</p>
+                </div>
+            </div>
+            <!-- Professional Action Toolbar -->
+            <div class="flex flex-wrap items-center gap-2">
+                <button type="button" onclick="resetAllData()" class="bg-rose-600 hover:bg-rose-700 text-white text-sm px-4 py-2 rounded-lg font-medium transition shadow flex items-center gap-2">
+                    <i class="fa-solid fa-rotate-right"></i> Reset Data & Foto
+                </button>
+                <button type="button" onclick="exportPDF()" class="bg-amber-600 hover:bg-amber-700 text-white text-sm px-4 py-2 rounded-lg font-medium transition shadow flex items-center gap-2">
+                    <i class="fa-solid fa-file-pdf"></i> Export PDF
+                </button>
+                <button type="button" onclick="exportExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm px-4 py-2 rounded-lg font-medium transition shadow flex items-center gap-2">
+                    <i class="fa-solid fa-file-excel"></i> Export Excel
+                </button>
+                <button type="button" onclick="syncToCloud()" class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-lg font-medium transition shadow flex items-center gap-2">
+                    <i class="fa-solid fa-cloud-arrow-up"></i> Kirim ke Drive & Sheets
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full space-y-6">
+
+        <!-- Status Summary & Guard Roster -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-sm flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-slate-400">Status Sistem</p>
+                    <p class="text-lg font-bold text-accentGreen mt-1"><i class="fa-solid fa-circle text-xs mr-1 animate-pulse"></i> AKTIF</p>
+                </div>
+                <div class="bg-slate-700 p-3 rounded-lg text-accentGreen"><i class="fa-solid fa-signal text-xl"></i></div>
+            </div>
+
+            <!-- Petugas & Shift Selector Widget -->
+            <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-sm md:col-span-2 flex flex-col justify-center">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                    <div>
+                        <p class="text-xs text-slate-400">Petugas Bertugas & Shift Aktif</p>
+                        <div class="flex items-center gap-2 mt-1">
+                            <select id="guardSelect" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-sm text-slate-200 focus:outline-none focus:border-accentBlue font-medium">
+                                <option value="Parman">Parman</option>
+                                <option value="Abkt">Abkt</option>
+                                <option value="Mandor Asmat">Mandor Asmat</option>
+                                <option value="RW Birin">RW Birin</option>
+                            </select>
+                            <select id="shiftSelect" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-sm text-accentBlue focus:outline-none focus:border-accentBlue font-medium">
+                                <option value="Shift 1 (07:00 - 15:00)">Shift 1 (07:00 - 15:00)</option>
+                                <option value="Shift 2 (15:00 - 23:00)">Shift 2 (15:00 - 23:00)</option>
+                                <option value="Shift 3 (23:00 - 07:00)">Shift 3 (23:00 - 07:00)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="bg-slate-700/50 p-2.5 rounded-lg text-accentBlue hidden sm:block">
+                        <i class="fa-solid fa-user-shield text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-sm flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-slate-400">Waktu Server</p>
+                    <p id="clock" class="text-lg font-bold text-slate-200 mt-1">00:00:00</p>
+                </div>
+                <div class="bg-slate-700 p-3 rounded-lg text-purple-400"><i class="fa-solid fa-clock text-xl"></i></div>
+            </div>
+        </div>
+
+        <form id="securityForm" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+            <!-- 1. Laporan Tamu -->
+            <div class="bg-slate-800 rounded-xl border border-slate-700 p-5 shadow-md flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center gap-3 mb-4 pb-2 border-b border-slate-700">
+                        <span class="bg-blue-900/50 text-blue-400 p-2 rounded-lg"><i class="fa-solid fa-id-card"></i></span>
+                        <h2 class="font-bold text-base">1. Laporan Tamu</h2>
+                    </div>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Nama Tamu</label>
+                            <input type="text" id="tamu_nama" name="tamu_nama" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accentBlue" placeholder="Nama lengkap tamu">
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Instansi / Perusahaan</label>
+                                <input type="text" id="tamu_instansi" name="tamu_instansi" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accentBlue" placeholder="Asal instansi">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Keperluan</label>
+                                <input type="text" id="tamu_keperluan" name="tamu_keperluan" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accentBlue" placeholder="Tujuan kunjungan">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Waktu Masuk</label>
+                                <input type="time" id="tamu_jam_masuk" name="tamu_jam_masuk" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accentBlue">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Waktu Keluar</label>
+                                <input type="time" id="tamu_jam_keluar" name="tamu_jam_keluar" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accentBlue">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4 pt-3 border-t border-slate-700/60">
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Upload / Ambil Foto Tamu/ID</label>
+                    <div class="flex items-center gap-3">
+                        <input type="file" id="file_tamu" accept="image/*" onchange="previewImage(event, 'preview_tamu')" class="block w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-700 file:text-slate-200 hover:file:bg-slate-600 cursor-pointer">
+                        <div id="container_preview_tamu" class="hidden relative w-12 h-12 rounded-lg overflow-hidden border border-slate-600 shrink-0">
+                            <img id="preview_tamu" src="" alt="Preview" class="w-full h-full object-cover">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Laporan Kejadian -->
+            <div class="bg-slate-800 rounded-xl border border-slate-700 p-5 shadow-md flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center gap-3 mb-4 pb-2 border-b border-slate-700">
+                        <span class="bg-rose-900/50 text-rose-400 p-2 rounded-lg"><i class="fa-solid fa-triangle-exclamation"></i></span>
+                        <h2 class="font-bold text-base">2. Laporan Kejadian</h2>
+                    </div>
+                    <div class="space-y-3">
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Jenis Kejadian</label>
+                                <input type="text" id="kejadian_jenis" name="kejadian_jenis" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accentBlue" placeholder="Jenis insiden">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Tingkat Keparahan</label>
+                                <select id="kejadian_severity" name="kejadian_severity" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accentBlue">
+                                    <option value="Rendah">Rendah</option>
+                                    <option value="Sedang">Sedang</option>
+                                    <option value="Tinggi">Tinggi</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Lokasi Kejadian</label>
+                            <input type="text" id="kejadian_lokasi" name="kejadian_lokasi" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accentBlue" placeholder="Lokasi area">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Kronologi Singkat</label>
+                            <textarea id="kejadian_kronologi" name="kejadian_kronologi" rows="2" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accentBlue resize-none" placeholder="Uraian kejadian..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4 pt-3 border-t border-slate-700/60">
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Upload / Ambil Foto Bukti Kejadian</label>
+                    <div class="flex items-center gap-3">
+                        <input type="file" id="file_kejadian" accept="image/*" onchange="previewImage(event, 'preview_kejadian')" class="block w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-700 file:text-slate-200 hover:file:bg-slate-600 cursor-pointer">
+                        <div id="container_preview_kejadian" class="hidden relative w-12 h-12 rounded-lg overflow-hidden border border-slate-600 shrink-0">
+                            <img id="preview_kejadian" src="" alt="Preview" class="w-full h-full object-cover">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Slipway -->
+            <div class="bg-slate-800 rounded-xl border border-slate-700 p-5 shadow-md flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center gap-3 mb-4 pb-2 border-b border-slate-700">
+                        <span class="bg-teal-900/50 text-teal-400 p-2 rounded-lg"><i class="fa-solid fa-ship"></i></span>
+                        <h2 class="font-bold text-base">3. Slipway</h2>
+                    </div>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Kondisi Slipway</label>
+                            <select id="slipway_kondisi" name="slipway_kondisi" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accentBlue">
+                                <option value="Aman / Normal">Aman / Normal</option>
+                                <option value="Banyak sampah">Banyak Sampah</option>
+                                <option value="Lainnya">Lainnya</option>
+                                </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Catatan Operasional</label>
+                            <textarea id="slipway_catatan" name="slipway_catatan" rows="3" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accentBlue resize-none" placeholder="Catatan slipway..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4 pt-3 border-t border-slate-700/60">
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Upload / Ambil Foto Kondisi Slipway</label>
+                    <div class="flex items-center gap-3">
+                        <input type="file" id="file_slipway" accept="image/*" onchange="previewImage(event, 'preview_slipway')" class="block w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-700 file:text-slate-200 hover:file:bg-slate-600 cursor-pointer">
+                        <div id="container_preview_slipway" class="hidden relative w-12 h-12 rounded-lg overflow-hidden border border-slate-600 shrink-0">
+                            <img id="preview_slipway" src="" alt="Preview" class="w-full h-full object-cover">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. Ketinggian Air -->
+            <div class="bg-slate-800 rounded-xl border border-slate-700 p-5 shadow-md flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center gap-3 mb-4 pb-2 border-b border-slate-700">
+                        <span class="bg-cyan-900/50 text-cyan-400 p-2 rounded-lg"><i class="fa-solid fa-water"></i></span>
+                        <h2 class="font-bold text-base">4. Ketinggian Air</h2>
+                    </div>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Status Ketinggian</label>
+                            <select id="air_status" name="air_status" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accentBlue">
+                                <option value="Normal">Normal</option>
+                                <option value="Siaga">Siaga</option>
+                                <option value="Bahaya">Bahaya</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Catatan Tambahan</label>
+                            <input type="text" id="air_catatan" name="air_catatan" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accentBlue" placeholder="Kondisi aliran air">
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4 pt-3 border-t border-slate-700/60">
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Upload / Ambil Foto Papan Ukur / Air</label>
+                    <div class="flex items-center gap-3">
+                        <input type="file" id="file_air" accept="image/*" onchange="previewImage(event, 'preview_air')" class="block w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-700 file:text-slate-200 hover:file:bg-slate-600 cursor-pointer">
+                        <div id="container_preview_air" class="hidden relative w-12 h-12 rounded-lg overflow-hidden border border-slate-600 shrink-0">
+                            <img id="preview_air" src="" alt="Preview" class="w-full h-full object-cover">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. Hanggar -->
+            <div class="bg-slate-800 rounded-xl border border-slate-700 p-5 shadow-md flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center gap-3 mb-4 pb-2 border-b border-slate-700">
+                        <span class="bg-indigo-900/50 text-indigo-400 p-2 rounded-lg"><i class="fa-solid fa-warehouse"></i></span>
+                        <h2 class="font-bold text-base">5. Hanggar</h2>
+                    </div>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Pengecekan Keamanan Area</label>
+                            <select id="hanggar_status" name="hanggar_status" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accentBlue">
+                                <option value="Aman">Aman</option>
+                                <option value="Ada Temuan">Ada Temuan</option>
+                                <option value="Dalam Perbaikan">Dalam Perbaikan</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Catatan Pengecekan</label>
+                            <textarea id="hanggar_catatan" name="hanggar_catatan" rows="3" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accentBlue resize-none" placeholder="Catatan kondisi hanggar..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4 pt-3 border-t border-slate-700/60">
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Upload / Ambil Foto Kondisi Hanggar</label>
+                    <div class="flex items-center gap-3">
+                        <input type="file" id="file_hanggar" accept="image/*" onchange="previewImage(event, 'preview_hanggar')" class="block w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-700 file:text-slate-200 hover:file:bg-slate-600 cursor-pointer">
+                        <div id="container_preview_hanggar" class="hidden relative w-12 h-12 rounded-lg overflow-hidden border border-slate-600 shrink-0">
+                            <img id="preview_hanggar" src="" alt="Preview" class="w-full h-full object-cover">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 6. TPS3R -->
+            <div class="bg-slate-800 rounded-xl border border-slate-700 p-5 shadow-md flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center gap-3 mb-4 pb-2 border-b border-slate-700">
+                        <span class="bg-emerald-900/50 text-emerald-400 p-2 rounded-lg"><i class="fa-solid fa-recycle"></i></span>
+                        <h2 class="font-bold text-base">6. TPS3R</h2>
+                    </div>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Status Operasional / Kebersihan</label>
+                            <select id="tps_status" name="tps_status" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accentBlue">
+                                <option value="Bersih & Tertib">Bersih & Tertib</option>
+                                <option value="Perlu Pengangkutan">Perlu Pengangkutan</option>
+                                <option value="Penuh / Overload">Penuh / Overload</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Catatan Pengolahan</label>
+                            <textarea id="tps_catatan" name="tps_catatan" rows="3" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accentBlue resize-none" placeholder="Catatan aktivitas TPS3R..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4 pt-3 border-t border-slate-700/60">
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Upload / Ambil Foto Area TPS3R</label>
+                    <div class="flex items-center gap-3">
+                        <input type="file" id="file_tps" accept="image/*" onchange="previewImage(event, 'preview_tps')" class="block w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-700 file:text-slate-200 hover:file:bg-slate-600 cursor-pointer">
+                        <div id="container_preview_tps" class="hidden relative w-12 h-12 rounded-lg overflow-hidden border border-slate-600 shrink-0">
+                            <img id="preview_tps" src="" alt="Preview" class="w-full h-full object-cover">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </form>
+
+    </main>
+
+    <footer class="bg-slate-800 border-t border-slate-700 py-4 mt-8 text-center text-xs text-slate-400">
+        <p>&copy; Farman. Security Operations Center. All rights reserved. | Professional Single-File Dashboard</p>
+    </footer>
+
+    <!-- Enhanced Loading Modal Overlay with Progress Steps -->
+    <div id="loadingModal" class="fixed inset-0 bg-slate-950/85 z-50 hidden flex flex-col items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-700 p-6 rounded-2xl shadow-2xl flex flex-col items-center max-w-md w-full space-y-4">
+            <div class="relative flex items-center justify-center">
+                <div class="w-16 h-16 border-4 border-slate-700 border-t-accentBlue rounded-full animate-spin"></div>
+                <div class="absolute text-xs font-bold text-accentBlue" id="progressPercent">0%</div>
+            </div>
+            <div class="text-center">
+                <h3 id="loadingTitle" class="text-base font-bold text-slate-100">Memulai Sinkronisasi...</h3>
+                <p id="loadingDesc" class="text-xs text-slate-400 mt-1">Mempersiapkan pengiriman data teks & foto ke Cloud.</p>
+            </div>
+            <!-- Live Progress Steps Tracker -->
+            <div class="w-full bg-slate-900/80 p-3 rounded-xl border border-slate-700/50 space-y-2 text-xs text-left">
+                <div id="step1" class="flex items-center gap-2 text-slate-400">
+                    <i class="fa-regular fa-circle text-slate-600"></i> Memvalidasi Data Identitas & Laporan Teks
+                </div>
+                <div id="step2" class="flex items-center gap-2 text-slate-400">
+                    <i class="fa-regular fa-circle text-slate-600"></i> Mengemas & Mengunggah File Foto ke Google Drive
+                </div>
+                <div id="step3" class="flex items-center gap-2 text-slate-400">
+                    <i class="fa-regular fa-circle text-slate-600"></i> Menulis Rekaman Baris ke Google Sheets
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Professional Logic -->
+    <script>
+        // Live Clock
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clock').innerText = now.toLocaleTimeString('id-ID');
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // Image Preview Handler storing Base64 data attribute on elements
+        function previewImage(event, previewId) {
+            const file = event.target.files[0];
+            const preview = document.getElementById(previewId);
+            const container = document.getElementById('container_' + previewId);
+
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    preview.setAttribute('data-base64', e.target.result);
+                    container.classList.remove('hidden');
+                }
+                reader.readAsDataURL(file);
+            } else {
+                preview.src = '';
+                preview.removeAttribute('data-base64');
+                container.classList.add('hidden');
+            }
+        }
+
+        // Reset All Data & Photos Function with confirmation
+        function resetAllData() {
+            if (confirm("Apakah Anda yakin ingin menghapus seluruh data input dan foto yang telah diunggah?")) {
+                document.getElementById('securityForm').reset();
+                const previews = ['preview_tamu', 'preview_kejadian', 'preview_slipway', 'preview_air', 'preview_hanggar', 'preview_tps'];
+                const fileInputs = ['file_tamu', 'file_kejadian', 'file_slipway', 'file_air', 'file_hanggar', 'file_tps'];
+                
+                previews.forEach(id => {
+                    const img = document.getElementById(id);
+                    img.src = '';
+                    img.removeAttribute('data-base64');
+                    document.getElementById('container_' + id).classList.add('hidden');
+                });
+                
+                fileInputs.forEach(id => {
+                    const input = document.getElementById(id);
+                    if(input) input.value = '';
+                });
+
+                alert("Seluruh data form dan pratinjau foto berhasil dibersihkan.");
+            }
+        }
+
+        // Helper: Collect structured data map
+        function getStructuredReportData() {
+            return {
+                timestamp: new Date().toLocaleString('id-ID'),
+                petugas: document.getElementById('guardSelect').value,
+                shift: document.getElementById('shiftSelect').value,
+                tamu: {
+                    nama: document.getElementById('tamu_nama').value || '(Kosong)',
+                    instansi: document.getElementById('tamu_instansi').value || '(Kosong)',
+                    keperluan: document.getElementById('tamu_keperluan').value || '(Kosong)',
+                    jamMasuk: document.getElementById('tamu_jam_masuk').value || '(Kosong)',
+                    jamKeluar: document.getElementById('tamu_jam_keluar').value || '(Kosong)',
+                    foto: document.getElementById('preview_tamu').getAttribute('data-base64') ? 'Terlampir' : 'Tidak Ada'
+                },
+                kejadian: {
+                    jenis: document.getElementById('kejadian_jenis').value || '(Kosong)',
+                    severity: document.getElementById('kejadian_severity').value,
+                    lokasi: document.getElementById('kejadian_lokasi').value || '(Kosong)',
+                    kronologi: document.getElementById('kejadian_kronologi').value || '(Kosong)',
+                    foto: document.getElementById('preview_kejadian').getAttribute('data-base64') ? 'Terlampir' : 'Tidak Ada'
+                },
+                slipway: {
+                    kondisi: document.getElementById('slipway_kondisi').value,
+                    catatan: document.getElementById('slipway_catatan').value || '(Kosong)',
+                    foto: document.getElementById('preview_slipway').getAttribute('data-base64') ? 'Terlampir' : 'Tidak Ada'
+                },
+                ketinggianAir: {
+                    status: document.getElementById('air_status').value,
+                    catatan: document.getElementById('air_catatan').value || '(Kosong)',
+                    foto: document.getElementById('preview_air').getAttribute('data-base64') ? 'Terlampir' : 'Tidak Ada'
+                },
+                hanggar: {
+                    status: document.getElementById('hanggar_status').value,
+                    catatan: document.getElementById('hanggar_catatan').value || '(Kosong)',
+                    foto: document.getElementById('preview_hanggar').getAttribute('data-base64') ? 'Terlampir' : 'Tidak Ada'
+                },
+                tps3r: {
+                    status: document.getElementById('tps_status').value,
+                    catatan: document.getElementById('tps_catatan').value || '(Kosong)',
+                    foto: document.getElementById('preview_tps').getAttribute('data-base64') ? 'Terlampir' : 'Tidak Ada'
+                }
+            };
+        }
+
+        // Professional Clean PDF Export using jsPDF
+        function exportPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const d = getStructuredReportData();
+
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(16);
+            doc.text("LAPORAN OPERASIONAL SECURITY", 14, 18);
+            
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
+            doc.text(`Waktu Laporan: ${d.timestamp}`, 14, 25);
+            doc.text(`Petugas Jaga: ${d.petugas} (${d.shift})`, 14, 31);
+            doc.line(14, 35, 196, 35);
+
+            let y = 43;
+
+            function addSectionTitle(title) {
+                if (y > 265) { doc.addPage(); y = 20; }
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(11);
+                doc.setTextColor(30, 41, 59);
+                doc.text(title, 14, y);
+                y += 6;
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(10);
+            }
+
+            function addField(label, value) {
+                if (y > 275) { doc.addPage(); y = 20; }
+                doc.text(`- ${label}: ${value}`, 18, y);
+                y += 6;
+            }
+
+            // 1. Tamu
+            addSectionTitle("1. LAPORAN TAMU");
+            addField("Nama Tamu", d.tamu.nama);
+            addField("Instansi", d.tamu.instansi);
+            addField("Keperluan", d.tamu.keperluan);
+            addField("Waktu Masuk / Keluar", `${d.tamu.jamMasuk} s/d ${d.tamu.jamKeluar}`);
+            addField("Foto Tamu / ID", d.tamu.foto);
+            y += 3;
+
+            // 2. Kejadian
+            addSectionTitle("2. LAPORAN KEJADIAN");
+            addField("Jenis Kejadian", d.kejadian.jenis);
+            addField("Tingkat Keparahan", d.kejadian.severity);
+            addField("Lokasi", d.kejadian.lokasi);
+            addField("Kronologi", d.kejadian.kronologi);
+            addField("Foto Bukti", d.kejadian.foto);
+            y += 3;
+
+            // 3. Slipway
+            addSectionTitle("3. SLIPWAY");
+            addField("Kondisi", d.slipway.kondisi);
+            addField("Catatan Operasional", d.slipway.catatan);
+            addField("Foto Slipway", d.slipway.foto);
+            y += 3;
+
+            // 4. Ketinggian Air
+            addSectionTitle("4. KETINGGIAN AIR");
+            addField("Status Air", d.ketinggianAir.status);
+            addField("Catatan", d.ketinggianAir.catatan);
+            addField("Foto Papan Ukur", d.ketinggianAir.foto);
+            y += 3;
+
+            // 5. Hanggar
+            addSectionTitle("5. HANGGAR");
+            addField("Status Keamanan", d.hanggar.status);
+            addField("Catatan", d.hanggar.catatan);
+            addField("Foto Hanggar", d.hanggar.foto);
+            y += 3;
+
+            // 6. TPS3R
+            addSectionTitle("6. TPS3R");
+            addField("Status Kebersihan", d.tps3r.status);
+            addField("Catatan", d.tps3r.catatan);
+            addField("Foto TPS3R", d.tps3r.foto);
+
+            doc.save(`Laporan_Security_${d.petugas.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`);
+        }
+
+        // Professional Clean Excel Export using SheetJS
+        function exportExcel() {
+            const d = getStructuredReportData();
+            
+            let excelRows = [
+                { "Kategori": "IDENTITAS", "Parameter / Field": "Waktu Laporan", "Nilai": d.timestamp, "Lampiran Foto": "-" },
+                { "Kategori": "IDENTITAS", "Parameter / Field": "Petugas Jaga", "Nilai": d.petugas, "Lampiran Foto": "-" },
+                { "Kategori": "IDENTITAS", "Parameter / Field": "Shift Aktif", "Nilai": d.shift, "Lampiran Foto": "-" },
+                
+                { "Kategori": "TAMU", "Parameter / Field": "Nama Tamu", "Nilai": d.tamu.nama, "Lampiran Foto": d.tamu.foto },
+                { "Kategori": "TAMU", "Parameter / Field": "Instansi", "Nilai": d.tamu.instansi, "Lampiran Foto": "-" },
+                { "Kategori": "TAMU", "Parameter / Field": "Keperluan", "Nilai": d.tamu.keperluan, "Lampiran Foto": "-" },
+                { "Kategori": "TAMU", "Parameter / Field": "Jam Masuk / Keluar", "Nilai": `${d.tamu.jamMasuk} - ${d.tamu.jamKeluar}`, "Lampiran Foto": "-" },
+
+                { "Kategori": "KEJADIAN", "Parameter / Field": "Jenis Kejadian", "Nilai": d.kejadian.jenis, "Lampiran Foto": d.kejadian.foto },
+                { "Kategori": "KEJADIAN", "Parameter / Field": "Tingkat Keparahan", "Nilai": d.kejadian.severity, "Lampiran Foto": "-" },
+                { "Kategori": "KEJADIAN", "Parameter / Field": "Lokasi", "Nilai": d.kejadian.lokasi, "Lampiran Foto": "-" },
+                { "Kategori": "KEJADIAN", "Parameter / Field": "Kronologi", "Nilai": d.kejadian.kronologi, "Lampiran Foto": "-" },
+
+                { "Kategori": "SLIPWAY", "Parameter / Field": "Kondisi Slipway", "Nilai": d.slipway.kondisi, "Lampiran Foto": d.slipway.foto },
+                { "Kategori": "SLIPWAY", "Parameter / Field": "Catatan", "Nilai": d.slipway.catatan, "Lampiran Foto": "-" },
+
+                { "Kategori": "KETINGGIAN AIR", "Parameter / Field": "Status Air", "Nilai": d.ketinggianAir.status, "Lampiran Foto": d.ketinggianAir.foto },
+                { "Kategori": "KETINGGIAN AIR", "Parameter / Field": "Catatan", "Nilai": d.ketinggianAir.catatan, "Lampiran Foto": "-" },
+
+                { "Kategori": "HANGGAR", "Parameter / Field": "Status Keamanan", "Nilai": d.hanggar.status, "Lampiran Foto": d.hanggar.foto },
+                { "Kategori": "HANGGAR", "Parameter / Field": "Catatan", "Nilai": d.hanggar.catatan, "Lampiran Foto": "-" },
+
+                { "Kategori": "TPS3R", "Parameter / Field": "Status Kebersihan", "Nilai": d.tps3r.status, "Lampiran Foto": d.tps3r.foto },
+                { "Kategori": "TPS3R", "Parameter / Field": "Catatan", "Nilai": d.tps3r.catatan, "Lampiran Foto": "-" }
+            ];
+
+            const worksheet = XLSX.utils.json_to_sheet(excelRows);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Rekap Laporan Security");
+            XLSX.writeFile(workbook, `Data_Security_${d.petugas.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.xlsx`);
+        }
+
+
+        // Sinkronisasi NYATA ke Google Apps Script (bukan simulasi).
+        // Isi URL setelah deploy Apps Script sebagai Web App.
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyu8f8GHZUJmrx_rD07hQVXDDp97YBs5LxBrWxKALd6ljN3ATKfh_FqhfWEpiMcEvau/exec';
+
+        const PHOTO_FIELDS = [
+            { key: 'tamu', input: 'file_tamu', preview: 'preview_tamu', label: 'Foto Tamu / ID' },
+            { key: 'kejadian', input: 'file_kejadian', preview: 'preview_kejadian', label: 'Foto Bukti Kejadian' },
+            { key: 'slipway', input: 'file_slipway', preview: 'preview_slipway', label: 'Foto Slipway' },
+            { key: 'air', input: 'file_air', preview: 'preview_air', label: 'Foto Ketinggian Air' },
+            { key: 'hanggar', input: 'file_hanggar', preview: 'preview_hanggar', label: 'Foto Hanggar' },
+            { key: 'tps', input: 'file_tps', preview: 'preview_tps', label: 'Foto TPS3R' }
+        ];
+
+        function fileToCompressedDataUrl(file, maxSide = 1600, quality = 0.78) {
+            return new Promise((resolve, reject) => {
+                if (!file) return resolve(null);
+                if (!file.type.startsWith('image/')) return reject(new Error('File harus berupa gambar.'));
+                const reader = new FileReader();
+                reader.onerror = () => reject(new Error('Gagal membaca file foto.'));
+                reader.onload = () => {
+                    const img = new Image();
+                    img.onerror = () => reject(new Error('Foto tidak dapat dibuka.'));
+                    img.onload = () => {
+                        const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+                        const canvas = document.createElement('canvas');
+                        canvas.width = Math.max(1, Math.round(img.width * scale));
+                        canvas.height = Math.max(1, Math.round(img.height * scale));
+                        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                        resolve(canvas.toDataURL('image/jpeg', quality));
+                    };
+                    img.src = reader.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function setSyncStep(step, percent, titleText, description) {
+            document.getElementById('progressPercent').innerText = percent + '%';
+            document.getElementById('loadingTitle').innerText = titleText;
+            document.getElementById('loadingDesc').innerText = description || '';
+            [1,2,3].forEach(n => {
+                const el = document.getElementById('step' + n);
+                el.className = 'flex items-center gap-2 text-slate-400';
+                el.querySelector('i').className = 'fa-regular fa-circle text-slate-600';
+                if (n < step) {
+                    el.className = 'flex items-center gap-2 text-accentGreen';
+                    el.querySelector('i').className = 'fa-solid fa-check text-accentGreen';
+                } else if (n === step) {
+                    el.className = 'flex items-center gap-2 text-accentBlue font-medium';
+                    el.querySelector('i').className = 'fa-solid fa-spinner fa-spin text-accentBlue';
+                }
+            });
+        }
+
+        async function syncToCloud() {
+            if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.includes('TEMPEL_URL_')) {
+                alert('URL Apps Script belum dipasang. Deploy Code.gs sebagai Web App, lalu tempel URL /exec pada variabel APPS_SCRIPT_URL.');
+                return;
+            }
+            const modal = document.getElementById('loadingModal');
+            modal.classList.remove('hidden');
+            try {
+                setSyncStep(1, 10, 'Memvalidasi laporan...', 'Mengumpulkan kolom laporan dan lampiran foto.');
+                const report = getStructuredReportData();
+                const photos = {};
+                let count = 0;
+
+                setSyncStep(2, 25, 'Menyiapkan foto...', 'Foto dikompres agar unggahan lebih ringan.');
+                for (const item of PHOTO_FIELDS) {
+                    const input = document.getElementById(item.input);
+                    const file = input.files && input.files[0];
+                    if (file) {
+                        const dataUrl = await fileToCompressedDataUrl(file);
+                        photos[item.key] = {
+                            name: (file.name || item.key).replace(/[^\w.\- ]/g, '_').slice(0, 100),
+                            mimeType: 'image/jpeg',
+                            data: dataUrl.split(',')[1]
+                        };
+                        count++;
+                    }
+                }
+
+                setSyncStep(2, 55, 'Mengirim foto ke Google Drive...', count + ' foto siap dikirim.');
+                const payload = {
+                    action: 'saveReport',
+                    report: report,
+                    photos: photos,
+                    clientVersion: '1.0'
+                };
+
+                // mode no-cors diperlukan untuk endpoint Apps Script lintas domain.
+                // Respons browser bersifat opaque; hasil akhir harus diperiksa di Google Sheets.
+                await fetch(APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
+
+                setSyncStep(3, 90, 'Permintaan dikirim...', 'Google Apps Script sedang memproses laporan. Periksa Google Sheets untuk memastikan baris tersimpan.');
+                await new Promise(resolve => setTimeout(resolve, 700));
+                document.getElementById('progressPercent').innerText = '100%';
+                document.getElementById('loadingTitle').innerText = 'Pengiriman selesai';
+                document.getElementById('loadingDesc').innerText = 'Browser tidak dapat membaca balasan Apps Script lintas domain. Verifikasi baris dan tautan foto di Google Sheets.';
+                [1,2,3].forEach(n => {
+                    const el = document.getElementById('step' + n);
+                    el.className = 'flex items-center gap-2 text-accentGreen';
+                    el.querySelector('i').className = 'fa-solid fa-check text-accentGreen';
+                });
+                await new Promise(resolve => setTimeout(resolve, 900));
+                modal.classList.add('hidden');
+                alert('Permintaan laporan telah dikirim ke Apps Script. Jumlah foto: ' + count + '. Karena batasan browser lintas domain, pastikan laporan dan tautan foto muncul di Google Sheets sebelum menutup halaman.');
+            } catch (err) {
+                modal.classList.add('hidden');
+                alert('Pengiriman gagal disiapkan: ' + (err && err.message ? err.message : err) + '\\nPeriksa koneksi, ukuran foto, dan URL Apps Script.');
+            }
+        }
+
+    </script>
+</body>
+</html>
+```
